@@ -7,7 +7,9 @@ export const SearchSection = ({
   onChange,
   onSubmit,
   isLoading,
-  error
+  error,
+  suggestions = [],
+  onSelectSuggestion
 }) => (
   <Card
     title="Search GitHub Profile"
@@ -27,5 +29,20 @@ export const SearchSection = ({
         {isLoading ? "Analyzing..." : "Analyze"}
       </Button>
     </form>
+    {suggestions.length ? (
+      <div className="suggestion-row">
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            className="suggestion-chip"
+            onClick={() => onSelectSuggestion?.(suggestion)}
+            disabled={isLoading}
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    ) : null}
   </Card>
 );

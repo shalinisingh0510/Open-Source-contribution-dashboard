@@ -18,6 +18,7 @@ export const PRSuccessChart = ({ mergedPRs = 0, totalPRs = 0 }) => {
     { name: "Merged", value: mergedPRs, fill: "#0f766e" },
     { name: "Other", value: openOrUnmerged, fill: "#fbbf24" }
   ];
+  const successRate = Number(((mergedPRs / totalPRs) * 100).toFixed(2));
 
   return (
     <ChartWrapper
@@ -37,6 +38,7 @@ export const PRSuccessChart = ({ mergedPRs = 0, totalPRs = 0 }) => {
           <Tooltip formatter={(value) => value} />
         </PieChart>
       </ResponsiveContainer>
+      <p className="chart-caption">{successRate}% merged</p>
     </ChartWrapper>
   );
 };

@@ -1,5 +1,6 @@
 const navItems = [
   { id: "overview", label: "Overview" },
+  { id: "insights", label: "Insights" },
   { id: "languages", label: "Languages" },
   { id: "activity", label: "Activity" },
   { id: "repositories", label: "Repositories" }
