@@ -1,7 +1,4 @@
-import { useState } from "react";
-import { ActivityBarChart } from "../components/charts/ActivityBarChart.jsx";
-import { LanguagePieChart } from "../components/charts/LanguagePieChart.jsx";
-import { PRSuccessChart } from "../components/charts/PRSuccessChart.jsx";
+import { Suspense, lazy, useState } from "react";
 import { MetricsGrid } from "../components/dashboard/MetricsGrid.jsx";
 import { ProfileCard } from "../components/dashboard/ProfileCard.jsx";
 import { SearchSection } from "../components/dashboard/SearchSection.jsx";
@@ -10,6 +7,24 @@ import { Card } from "../components/ui/Card.jsx";
 import { Loader } from "../components/ui/Loader.jsx";
 import { useDashboardData } from "../hooks/useDashboardData.js";
 import { DashboardLayout } from "../layouts/DashboardLayout.jsx";
+
+const LanguagePieChart = lazy(() =>
+  import("../components/charts/LanguagePieChart.jsx").then((module) => ({
+    default: module.LanguagePieChart
+  }))
+);
+
+const PRSuccessChart = lazy(() =>
+  import("../components/charts/PRSuccessChart.jsx").then((module) => ({
+    default: module.PRSuccessChart
+  }))
+);
+
+const ActivityBarChart = lazy(() =>
+  import("../components/charts/ActivityBarChart.jsx").then((module) => ({
+    default: module.ActivityBarChart
+  }))
+);
 
 export const DashboardPage = () => {
   const [usernameInput, setUsernameInput] = useState("");
@@ -61,16 +76,24 @@ export const DashboardPage = () => {
         <>
           <ProfileCard user={dashboardData.user} />
           <MetricsGrid metrics={dashboardData.metrics} />
-          <section id="languages" className="chart-grid">
-            <LanguagePieChart data={dashboardData.languages} />
-            <PRSuccessChart
-              mergedPRs={dashboardData.metrics.mergedPRs}
-              totalPRs={dashboardData.metrics.totalPRs}
-            />
-          </section>
-          <section id="activity" className="chart-grid chart-grid-single">
-            <ActivityBarChart data={dashboardData.activityByDate} />
-          </section>
+          <Suspense
+            fallback={
+              <Card>
+                <Loader label="Loading visualizations..." />
+              </Card>
+            }
+          >
+            <section id="languages" className="chart-grid">
+              <LanguagePieChart data={dashboardData.languages} />
+              <PRSuccessChart
+                mergedPRs={dashboardData.metrics.mergedPRs}
+                totalPRs={dashboardData.metrics.totalPRs}
+              />
+            </section>
+            <section id="activity" className="chart-grid chart-grid-single">
+              <ActivityBarChart data={dashboardData.activityByDate} />
+            </section>
+          </Suspense>
           <TopRepositoriesTable repositories={dashboardData.topRepositories} />
         </>
       )}
