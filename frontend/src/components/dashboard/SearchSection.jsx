@@ -18,6 +18,7 @@ export const SearchSection = ({
         id="username"
         label="GitHub Username"
         placeholder="e.g. torvalds"
+        hint="Tip: GitHub usernames can only contain letters, numbers, and single hyphens."
         value={value}
         onChange={(event) => onChange(event.target.value)}
         error={error}

@@ -1,184 +1,121 @@
-# Open-Source-contribution-dashboard
-🚀 Project Description
+# Open Source Contribution Dashboard
 
-Build a production-ready full-stack Open Source Contribution Dashboard that fetches, processes, and visualizes GitHub contribution data (repositories, pull requests, commits, languages, etc.).
+Production-ready full-stack dashboard to fetch and visualize GitHub contribution analytics.
 
-The application must be:
+## Features
 
-Scalable (handle thousands of users)
-Maintainable (clean architecture, reusable components)
-Extensible (easy to add new features)
-Professional UI/UX (modern dashboard design)
-🏗️ Tech Stack
-Frontend
-React (with Vite)
-Tailwind CSS (or CSS Modules)
-Recharts / Chart.js
-Axios
-React Router
-Backend
-Node.js
-Express.js
-GitHub REST API
-dotenv
-CORS
-📁 Project Structure
-open-source-dashboard/
-│
-├── frontend/        # React App
+- Real GitHub data (user profile, repositories, pull requests, activity, languages)
+- Clean backend architecture: `Routes -> Controllers -> Services -> GitHub API`
+- Reusable frontend component system
+- Interactive charts for language distribution, activity trend, and PR success rate
+- Strong error handling for invalid users, GitHub API errors, and rate limits
+- Responsive SaaS-style dashboard UI
+
+## Tech Stack
+
+- Backend: Node.js, Express, Axios, CORS, Helmet, dotenv
+- Frontend: React (Vite), React Router, Axios, Recharts
+
+## Project Structure
+
+```text
+open-source-contribution-dashboard/
+├── backend/
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Page-level components
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── services/       # API calls
-│   │   ├── utils/          # Helper functions
-│   │   └── layouts/        # Layout components
-│
-├── backend/         # Node API
-│   ├── controllers/
-│   ├── routes/
-│   ├── services/
-│   ├── models/ (optional)
-│   ├── utils/
-│   └── config/
-│
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── utils/
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── layouts/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── utils/
+│   └── package.json
 └── README.md
-⚙️ DEVELOPMENT GUIDELINES (IMPORTANT)
-🔹 General Rules
-Write clean, modular, and readable code
-Use consistent naming conventions
-Add comments for important logic
-Avoid monolithic files
-🧠 Backend Architecture (MUST FOLLOW)
+```
 
-Follow SOLID principles:
+## API Endpoints
 
-✅ S — Single Responsibility
+- `GET /api/health`
+- `GET /api/user/:username`
+- `GET /api/repos/:username`
+- `GET /api/contributions/:username`
 
-Each file should do only one thing
-(e.g., controller handles request, service handles logic)
+### Example Contributions Response
 
-✅ O — Open/Closed
-
-Design code so new features can be added without modifying existing code
-
-✅ L — Liskov Substitution
-
-Keep functions predictable and replaceable
-
-✅ I — Interface Segregation
-
-Keep modules small and focused
-
-✅ D — Dependency Inversion
-
-Use services instead of tightly coupling logic
-
-🏗️ Backend Design Pattern
-Routes → Controllers → Services → External API
-Example Flow:
-Route → Controller → Service → GitHub API
-⚙️ Backend Features
-1. API Endpoints
-GET /api/user/:username
-GET /api/repos/:username
-GET /api/contributions/:username
-2. Data Processing
-
-Return structured analytics:
-
+```json
 {
-  "totalRepos": 25,
-  "totalStars": 120,
-  "totalPRs": 40,
-  "mergedPRs": 30,
-  "languages": {
-    "JavaScript": 60,
-    "Python": 40
+  "success": true,
+  "data": {
+    "user": {
+      "login": "octocat",
+      "name": "The Octocat"
+    },
+    "metrics": {
+      "totalRepos": 8,
+      "totalStars": 140,
+      "totalPRs": 32,
+      "mergedPRs": 21,
+      "prSuccessRate": 65.63
+    },
+    "languages": [
+      { "name": "JavaScript", "value": 42.5 }
+    ],
+    "activityByDate": [
+      { "date": "2026-04-01", "contributions": 3 }
+    ],
+    "topRepositories": []
   }
 }
-3. Advanced Backend Requirements
-Implement caching (optional but preferred) for performance
-Handle:
-API rate limits
-Invalid users
-Use async/await
-Centralized error handling middleware
-🎨 Frontend Requirements (HIGH PRIORITY)
-🎯 Goal
+```
 
-Build a modern, professional, dashboard-style UI
+## Setup
 
-💎 UI/UX Requirements
-Clean, minimal, and modern design
-Responsive (mobile + desktop)
-Smooth animations
-Loading skeletons
-Error states
-🧩 Reusable Components (MANDATORY)
+### 1. Backend
 
-Create reusable UI components:
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run dev
+```
 
-Button
-Card
-Input
-Loader
-Navbar
-Sidebar
-ChartWrapper
+Backend runs on `http://localhost:5000`.
 
-👉 All components must be:
+### 2. Frontend
 
-Reusable
-Configurable via props
-Styled consistently
-📊 Dashboard Features
-1. Search Section
-Input field (GitHub username)
-Search button
-Validation
-2. Metrics Cards
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
 
-Display:
+Frontend runs on `http://localhost:5173`.
 
-Total Repositories
-Total Stars
-Pull Requests
-Merged PRs
-3. Charts (IMPORTANT)
-Language distribution (Pie Chart)
-Contribution activity (Bar/Line Chart)
-PR success rate
-⚙️ Frontend Architecture
-Use custom hooks for logic (e.g., useFetchUser)
-Keep UI and logic separate
-Use a service layer for API calls
-🔗 API Integration
+## Environment Variables
 
-Frontend should call:
+### Backend (`backend/.env`)
 
-http://localhost:5000/api/contributions/:username
+- `PORT=5000`
+- `FRONTEND_ORIGIN=http://localhost:5173`
+- `GITHUB_API_BASE_URL=https://api.github.com`
+- `GITHUB_TOKEN=` (optional but recommended to avoid low rate limits)
+- `CACHE_TTL_SECONDS=300`
 
-Handle:
+### Frontend (`frontend/.env`)
 
-Loading state
-Error state
-Empty data
-🚀 PERFORMANCE & SCALABILITY
-Optimize API calls
-Avoid unnecessary re-renders
-Use memoization where needed
-Structure code for future scaling
-🌍 DEPLOYMENT REQUIREMENTS
-Backend:
-Must be deployable on Render / Railway
-Use environment variables
-Frontend:
-Must be deployable on Vercel / Netlify
-API base URL should be configurable
-⭐ BONUS FEATURES (OPTIONAL)
-Dark mode
-GitHub OAuth login
-Export dashboard as PDF
-Contribution streak tracker
-Top repositories list
+- `VITE_API_BASE_URL=http://localhost:5000`
+
+## Notes
+
+- If you hit GitHub rate limits, add a personal access token to `GITHUB_TOKEN`.
+- The backend includes in-memory TTL caching to reduce repeated GitHub API calls.
+- UI includes loading, empty, and error states for production resilience.
