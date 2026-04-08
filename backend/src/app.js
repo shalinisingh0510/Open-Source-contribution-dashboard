@@ -9,10 +9,29 @@ import { githubRouter } from "./routes/githubRoutes.js";
 
 export const app = express();
 
+const isOriginAllowed = (origin) => {
+  if (!origin) {
+    return true;
+  }
+
+  if (env.frontendOrigins.includes(origin)) {
+    return true;
+  }
+
+  return env.frontendOriginPatterns.some((pattern) => pattern.test(origin));
+};
+
 app.use(helmet());
 app.use(
   cors({
-    origin: env.frontendOrigin
+    origin(origin, callback) {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
   })
 );
 app.use(express.json());
