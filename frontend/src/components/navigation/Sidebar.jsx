@@ -3,6 +3,7 @@ const navItems = [
   { id: "insights", label: "Insights" },
   { id: "languages", label: "Languages" },
   { id: "activity", label: "Activity" },
+  { id: "recent", label: "Recent Repos" },
   { id: "repositories", label: "Repositories" }
 ];
 

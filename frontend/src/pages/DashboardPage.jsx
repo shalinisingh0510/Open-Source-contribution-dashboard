@@ -6,8 +6,10 @@ import {
   useState
 } from "react";
 import { InsightsStrip } from "../components/dashboard/InsightsStrip.jsx";
+import { DashboardSkeleton } from "../components/dashboard/DashboardSkeleton.jsx";
 import { MetricsGrid } from "../components/dashboard/MetricsGrid.jsx";
 import { ProfileCard } from "../components/dashboard/ProfileCard.jsx";
+import { RecentRepositories } from "../components/dashboard/RecentRepositories.jsx";
 import { SearchSection } from "../components/dashboard/SearchSection.jsx";
 import { TopRepositoriesTable } from "../components/dashboard/TopRepositoriesTable.jsx";
 import { Card } from "../components/ui/Card.jsx";
@@ -40,7 +42,14 @@ const RepoStarsChart = lazy(() =>
 );
 
 const SUGGESTED_USERNAMES = ["torvalds", "gaearon", "octocat", "sindresorhus"];
-const SECTION_IDS = ["overview", "insights", "languages", "activity", "repositories"];
+const SECTION_IDS = [
+  "overview",
+  "insights",
+  "languages",
+  "activity",
+  "recent",
+  "repositories"
+];
 
 const includesQuery = (value, query) =>
   `${value || ""}`.toLowerCase().includes(query.toLowerCase());
@@ -134,9 +143,7 @@ export const DashboardPage = () => {
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
 
       {isLoading ? (
-        <Card>
-          <Loader label="Fetching GitHub analytics..." />
-        </Card>
+        <DashboardSkeleton />
       ) : !activeUsername ? (
         <Card>
           <p className="empty-state">
@@ -172,6 +179,8 @@ export const DashboardPage = () => {
               <RepoStarsChart data={topRepositories.slice(0, 8)} />
             </section>
           </Suspense>
+
+          <RecentRepositories repositories={dashboardData.recentRepositories} />
 
           <TopRepositoriesTable
             title="Repository Explorer"
