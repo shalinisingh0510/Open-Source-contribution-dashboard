@@ -7,7 +7,20 @@ const USERNAME_PATTERN = /^[a-zA-Z0-9](?:-?[a-zA-Z0-9]){0,38}$/;
 
 const normalizeError = (error) => {
   const status = error?.response?.status;
+  const requestUrl = error?.config?.url || "";
+  const baseUrl = error?.config?.baseURL || "";
   const fallback = "Unable to fetch dashboard data right now. Please try again.";
+  const onVercel =
+    typeof window !== "undefined" &&
+    window.location.hostname.endsWith("vercel.app");
+
+  if (error?.code === "API_BASE_URL_NOT_CONFIGURED") {
+    return "API base URL is missing. Set VITE_API_BASE_URL in Vercel project settings.";
+  }
+
+  if (status === 404 && onVercel && requestUrl.startsWith("/api/") && !baseUrl) {
+    return "Backend API is not deployed/configured. Set VITE_API_BASE_URL to your backend URL and redeploy.";
+  }
 
   if (status === 404) {
     return "GitHub user not found.";

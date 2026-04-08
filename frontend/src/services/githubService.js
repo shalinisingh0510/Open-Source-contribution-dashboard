@@ -1,4 +1,9 @@
-import { apiClient, unwrapResponse } from "./apiClient.js";
+import {
+  apiClient,
+  createApiConfigError,
+  isApiConfigured,
+  unwrapResponse
+} from "./apiClient.js";
 
 export const githubService = {
   async fetchUser(username) {
@@ -17,10 +22,23 @@ export const githubService = {
   },
 
   async fetchDashboardBundle(username) {
-    const [user, repos, contributions] = await Promise.all([
+    if (!isApiConfigured()) {
+      throw createApiConfigError();
+    }
+
+    const contributions = await this.fetchContributions(username);
+
+    if (contributions?.user && Array.isArray(contributions?.repositories)) {
+      return {
+        user: contributions.user,
+        repos: contributions.repositories,
+        contributions
+      };
+    }
+
+    const [user, repos] = await Promise.all([
       this.fetchUser(username),
-      this.fetchRepos(username),
-      this.fetchContributions(username)
+      this.fetchRepos(username)
     ]);
 
     return {
