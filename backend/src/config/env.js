@@ -7,25 +7,25 @@ const toNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const toList = (value, fallback = []) =>
-  (value || "")
+const toList = (value, fallback = []) => {
+  const normalized = (value || "")
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean).length
-    ? (value || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : fallback;
+    .filter(Boolean);
+
+  return normalized.length ? normalized : fallback;
+};
 
 const toRegexList = (value) =>
-  toList(value).map((pattern) => {
-    try {
-      return new RegExp(pattern);
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
+  toList(value, [])
+    .map((pattern) => {
+      try {
+        return new RegExp(pattern);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
 export const env = Object.freeze({
   port: toNumber(process.env.PORT, 5000),
@@ -36,5 +36,6 @@ export const env = Object.freeze({
   frontendOriginPatterns: toRegexList(process.env.FRONTEND_ORIGIN_PATTERNS),
   githubApiBaseUrl: process.env.GITHUB_API_BASE_URL || "https://api.github.com",
   githubToken: process.env.GITHUB_TOKEN || "",
-  cacheTtlSeconds: toNumber(process.env.CACHE_TTL_SECONDS, 300)
+  cacheTtlSeconds: toNumber(process.env.CACHE_TTL_SECONDS, 300),
+  activityWindowDays: toNumber(process.env.ACTIVITY_WINDOW_DAYS, 21)
 });

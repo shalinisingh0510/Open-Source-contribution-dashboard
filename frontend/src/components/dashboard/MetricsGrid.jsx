@@ -3,9 +3,10 @@ import { Card } from "../ui/Card.jsx";
 const metricConfig = [
   { key: "totalRepos", label: "Total Repositories" },
   { key: "totalStars", label: "Total Stars" },
+  { key: "totalForks", label: "Forks" },
+  { key: "totalWatchers", label: "Watchers" },
   { key: "totalPRs", label: "Pull Requests" },
-  { key: "mergedPRs", label: "Merged PRs" },
-  { key: "prSuccessRate", label: "PR Success Rate", suffix: "%" }
+  { key: "mergedPRs", label: "Merged PRs" }
 ];
 
 export const MetricsGrid = ({ metrics = {} }) => (

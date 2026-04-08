@@ -4,6 +4,9 @@ import { AppError } from "../utils/AppError.js";
 import { InMemoryCache } from "../utils/inMemoryCache.js";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9](?:-?[a-zA-Z0-9]){0,38}$/;
+const MAX_REPO_PAGES = 3;
+const MAX_EVENT_PAGES = 2;
+const PAGE_SIZE = 100;
 
 export class GitHubApiService {
   constructor() {
@@ -13,6 +16,7 @@ export class GitHubApiService {
       timeout: 15000,
       headers: {
         Accept: "application/vnd.github+json",
+        "User-Agent": "open-source-contribution-dashboard",
         "X-GitHub-Api-Version": "2022-11-28",
         ...(env.githubToken ? { Authorization: `Bearer ${env.githubToken}` } : {})
       }
@@ -34,25 +38,19 @@ export class GitHubApiService {
 
   async getUserRepos(username) {
     return this.fetchWithCache(`repos:${username}`, async () => {
-      const response = await this.request(`/users/${username}/repos`, {
-        params: {
-          per_page: 100,
-          sort: "updated",
-          direction: "desc"
-        }
+      return this.fetchPaginated(`/users/${username}/repos`, MAX_REPO_PAGES, {
+        per_page: PAGE_SIZE,
+        sort: "updated",
+        direction: "desc"
       });
-      return response.data;
     });
   }
 
   async getUserEvents(username) {
     return this.fetchWithCache(`events:${username}`, async () => {
-      const response = await this.request(`/users/${username}/events/public`, {
-        params: {
-          per_page: 100
-        }
+      return this.fetchPaginated(`/users/${username}/events/public`, MAX_EVENT_PAGES, {
+        per_page: PAGE_SIZE
       });
-      return response.data;
     });
   }
 
@@ -81,25 +79,50 @@ export class GitHubApiService {
   }
 
   async getLanguagesMap(repos) {
-    const repositorySubset = repos.slice(0, 12);
+    const repositorySubset = repos.slice(0, 20);
 
-    const languageEntries = await Promise.all(
-      repositorySubset.map(async (repo) => {
-        try {
-          const response = await this.request(repo.languages_url);
-          return response.data;
-        } catch (_error) {
-          return {};
-        }
-      })
+    const languageEntries = await Promise.allSettled(
+      repositorySubset.map((repo) => this.request(repo.languages_url))
     );
 
-    return languageEntries.reduce((accumulator, languageMap) => {
+    return languageEntries.reduce((accumulator, entry) => {
+      if (entry.status !== "fulfilled") {
+        return accumulator;
+      }
+
+      const languageMap = entry.value.data || {};
       for (const [language, bytes] of Object.entries(languageMap)) {
         accumulator[language] = (accumulator[language] || 0) + bytes;
       }
+
       return accumulator;
     }, {});
+  }
+
+  async fetchPaginated(url, maxPages, baseParams = {}) {
+    const items = [];
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const response = await this.request(url, {
+        params: {
+          ...baseParams,
+          page
+        }
+      });
+
+      const pageItems = response.data || [];
+      if (!Array.isArray(pageItems) || pageItems.length === 0) {
+        break;
+      }
+
+      items.push(...pageItems);
+
+      if (pageItems.length < PAGE_SIZE) {
+        break;
+      }
+    }
+
+    return items;
   }
 
   async fetchWithCache(key, factory) {
@@ -127,6 +150,11 @@ export class GitHubApiService {
     }
 
     const { status, headers, data } = error.response;
+    const message = `${data?.message || ""}`.toLowerCase();
+
+    if (status === 401) {
+      return new AppError("Invalid GitHub token.", 401);
+    }
 
     if (status === 404) {
       return new AppError("GitHub user not found.", 404);
@@ -134,7 +162,9 @@ export class GitHubApiService {
 
     if (
       status === 403 &&
-      (headers["x-ratelimit-remaining"] === "0" || `${data?.message || ""}`.toLowerCase().includes("rate limit"))
+      (headers["x-ratelimit-remaining"] === "0" ||
+        message.includes("rate limit") ||
+        message.includes("abuse detection"))
     ) {
       return new AppError(
         "GitHub API rate limit reached. Please try again later or provide a token.",

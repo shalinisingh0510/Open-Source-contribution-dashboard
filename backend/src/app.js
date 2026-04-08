@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 import { githubRouter } from "./routes/githubRoutes.js";
+import { AppError } from "./utils/AppError.js";
 
 export const app = express();
 
@@ -30,9 +31,9 @@ app.use(
         return;
       }
 
-      callback(new Error(`CORS blocked for origin: ${origin}`));
+      callback(new AppError(`CORS blocked for origin: ${origin}`, 403));
     }
-  })
+  }),
 );
 app.use(express.json());
 app.use(morgan("dev"));

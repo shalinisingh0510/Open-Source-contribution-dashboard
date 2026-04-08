@@ -5,6 +5,8 @@ export const ProfileCard = ({ user }) => {
     return null;
   }
 
+  const locationParts = [user.company, user.location].filter(Boolean);
+
   return (
     <Card className="profile-card">
       <div className="profile-content">
@@ -20,8 +22,11 @@ export const ProfileCard = ({ user }) => {
             @{user.login}
           </a>
           <p className="profile-bio">{user.bio || "No bio available."}</p>
+          {locationParts.length ? (
+            <p className="profile-location">{locationParts.join(" | ")}</p>
+          ) : null}
           <p className="profile-meta">
-            {user.followers} followers · {user.following} following ·{" "}
+            {user.followers} followers | {user.following} following |{" "}
             {user.publicRepos} public repos
           </p>
         </div>

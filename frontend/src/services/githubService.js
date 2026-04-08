@@ -14,5 +14,19 @@ export const githubService = {
   async fetchContributions(username) {
     const response = await apiClient.get(`/api/contributions/${username}`);
     return unwrapResponse(response);
+  },
+
+  async fetchDashboardBundle(username) {
+    const [user, repos, contributions] = await Promise.all([
+      this.fetchUser(username),
+      this.fetchRepos(username),
+      this.fetchContributions(username)
+    ]);
+
+    return {
+      user,
+      repos,
+      contributions
+    };
   }
 };

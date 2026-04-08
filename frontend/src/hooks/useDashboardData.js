@@ -1,6 +1,7 @@
 import { startTransition, useState } from "react";
 import { githubService } from "../services/githubService.js";
 import { defaultDashboardData } from "../utils/dashboardDefaults.js";
+import { mergeDashboardData } from "../utils/mergeDashboardData.js";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9](?:-?[a-zA-Z0-9]){0,38}$/;
 
@@ -14,6 +15,10 @@ const normalizeError = (error) => {
 
   if (status === 429) {
     return "GitHub API rate limit reached. Try again later.";
+  }
+
+  if (status === 403) {
+    return "Request blocked by CORS or permissions. Check backend allowed origins.";
   }
 
   return error?.response?.data?.message || fallback;
@@ -44,9 +49,11 @@ export const useDashboardData = () => {
     setIsLoading(true);
 
     try {
-      const contributions = await githubService.fetchContributions(trimmed);
+      const payload = await githubService.fetchDashboardBundle(trimmed);
+      const mergedDashboardData = mergeDashboardData(payload);
+
       startTransition(() => {
-        setDashboardData(contributions || defaultDashboardData);
+        setDashboardData(mergedDashboardData);
         setActiveUsername(trimmed);
       });
       return true;

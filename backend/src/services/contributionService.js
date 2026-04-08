@@ -1,6 +1,16 @@
+import { env } from "../config/env.js";
 import { githubApiService } from "./githubApiService.js";
 
-const DATE_WINDOW_DAYS = 14;
+const LANGUAGE_COLORS = [
+  "#0f766e",
+  "#f97316",
+  "#155e75",
+  "#4d7c0f",
+  "#dc2626",
+  "#0ea5e9",
+  "#9333ea",
+  "#1d4ed8"
+];
 
 const toIsoDate = (value) => new Date(value).toISOString().slice(0, 10);
 
@@ -22,26 +32,62 @@ export class ContributionService {
     this.githubService = githubService;
   }
 
+  mapUser(user) {
+    return {
+      id: user.id,
+      login: user.login,
+      name: user.name,
+      avatarUrl: user.avatar_url,
+      profileUrl: user.html_url,
+      bio: user.bio,
+      company: user.company,
+      location: user.location,
+      blog: user.blog,
+      followers: user.followers,
+      following: user.following,
+      publicRepos: user.public_repos,
+      publicGists: user.public_gists,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at
+    };
+  }
+
+  mapRepository(repo) {
+    return {
+      id: repo.id,
+      name: repo.name,
+      fullName: repo.full_name,
+      htmlUrl: repo.html_url,
+      description: repo.description,
+      homepage: repo.homepage,
+      language: repo.language,
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      watchers: repo.watchers_count,
+      openIssues: repo.open_issues_count,
+      size: repo.size,
+      defaultBranch: repo.default_branch,
+      isFork: repo.fork,
+      isArchived: repo.archived,
+      isPrivate: repo.private,
+      updatedAt: repo.updated_at,
+      pushedAt: repo.pushed_at
+    };
+  }
+
   async getUserSummary(username) {
     this.githubService.validateUsername(username);
-    return this.githubService.getUserProfile(username);
+    const user = await this.githubService.getUserProfile(username);
+    return this.mapUser(user);
   }
 
   async getUserRepositories(username) {
     this.githubService.validateUsername(username);
     const repos = await this.githubService.getUserRepos(username);
 
-    return repos.map((repo) => ({
-      id: repo.id,
-      name: repo.name,
-      htmlUrl: repo.html_url,
-      description: repo.description,
-      language: repo.language,
-      stars: repo.stargazers_count,
-      forks: repo.forks_count,
-      openIssues: repo.open_issues_count,
-      updatedAt: repo.updated_at
-    }));
+    return repos
+      .map((repo) => this.mapRepository(repo))
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   }
 
   async getContributionInsights(username) {
@@ -54,90 +100,157 @@ export class ContributionService {
       this.githubService.getPullRequestStats(username)
     ]);
 
-    const languagesMap = await this.githubService.getLanguagesMap(repos);
-
-    const totalStars = repos.reduce(
-      (total, repo) => total + (repo.stargazers_count || 0),
-      0
-    );
-    const totalForks = repos.reduce((total, repo) => total + (repo.forks_count || 0), 0);
-
-    const languages = this.normalizeLanguages(languagesMap);
+    const mappedUser = this.mapUser(user);
+    const mappedRepos = repos.map((repo) => this.mapRepository(repo));
+    const languageTotals = await this.githubService.getLanguagesMap(repos);
+    const languages = this.normalizeLanguages(languageTotals);
     const activityByDate = this.buildActivityTimeline(events);
-    const topRepositories = repos
+    const metrics = this.buildMetrics(mappedRepos, pullRequests);
+
+    const topRepositories = mappedRepos
       .slice()
-      .sort((a, b) => b.stargazers_count - a.stargazers_count)
-      .slice(0, 5)
-      .map((repo) => ({
-        id: repo.id,
-        name: repo.name,
-        stars: repo.stargazers_count,
-        forks: repo.forks_count,
-        language: repo.language,
-        htmlUrl: repo.html_url
-      }));
+      .sort((a, b) => b.stars - a.stars)
+      .slice(0, 8);
+
+    const recentRepositories = mappedRepos
+      .slice()
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .slice(0, 8);
 
     return {
-      user: {
-        login: user.login,
-        name: user.name,
-        avatarUrl: user.avatar_url,
-        profileUrl: user.html_url,
-        bio: user.bio,
-        followers: user.followers,
-        following: user.following,
-        publicRepos: user.public_repos
-      },
-      metrics: {
-        totalRepos: repos.length,
-        totalStars,
-        totalForks,
-        totalPRs: pullRequests.totalPRs,
-        mergedPRs: pullRequests.mergedPRs,
-        prSuccessRate:
-          pullRequests.totalPRs === 0
-            ? 0
-            : Number(((pullRequests.mergedPRs / pullRequests.totalPRs) * 100).toFixed(2))
-      },
+      user: mappedUser,
+      metrics,
       languages,
+      languageTotals,
+      topLanguage: languages[0]?.name || null,
       activityByDate,
-      topRepositories
+      activitySummary: this.buildActivitySummary(activityByDate, events),
+      pullRequests: {
+        total: pullRequests.totalPRs,
+        merged: pullRequests.mergedPRs,
+        openOrClosedWithoutMerge: Math.max(
+          pullRequests.totalPRs - pullRequests.mergedPRs,
+          0
+        ),
+        successRate: metrics.prSuccessRate
+      },
+      topRepositories,
+      recentRepositories,
+      repositories: mappedRepos
     };
   }
 
-  normalizeLanguages(languagesMap) {
-    const totalBytes = Object.values(languagesMap).reduce((sum, bytes) => sum + bytes, 0);
+  buildMetrics(repositories, pullRequests) {
+    const totalRepos = repositories.length;
+    const totalStars = repositories.reduce((total, repo) => total + (repo.stars || 0), 0);
+    const totalForks = repositories.reduce((total, repo) => total + (repo.forks || 0), 0);
+    const totalWatchers = repositories.reduce(
+      (total, repo) => total + (repo.watchers || 0),
+      0
+    );
+    const totalOpenIssues = repositories.reduce(
+      (total, repo) => total + (repo.openIssues || 0),
+      0
+    );
+    const activeRepos = repositories.filter((repo) => !repo.isArchived).length;
+    const prSuccessRate =
+      pullRequests.totalPRs === 0
+        ? 0
+        : Number(((pullRequests.mergedPRs / pullRequests.totalPRs) * 100).toFixed(2));
+
+    return {
+      totalRepos,
+      totalStars,
+      totalForks,
+      totalWatchers,
+      totalOpenIssues,
+      activeRepos,
+      totalPRs: pullRequests.totalPRs,
+      mergedPRs: pullRequests.mergedPRs,
+      prSuccessRate,
+      avgStarsPerRepo: totalRepos ? Number((totalStars / totalRepos).toFixed(2)) : 0
+    };
+  }
+
+  normalizeLanguages(languageTotals) {
+    const totalBytes = Object.values(languageTotals).reduce((sum, bytes) => sum + bytes, 0);
 
     if (!totalBytes) {
       return [];
     }
 
-    return Object.entries(languagesMap)
-      .map(([name, bytes]) => ({
+    return Object.entries(languageTotals)
+      .map(([name, bytes], index) => ({
         name,
-        value: Number(((bytes / totalBytes) * 100).toFixed(2))
+        bytes,
+        value: Number(((bytes / totalBytes) * 100).toFixed(2)),
+        color: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length]
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
   }
 
   buildActivityTimeline(events) {
-    const dateBucket = new Map(getLastNDates(DATE_WINDOW_DAYS).map((date) => [date, 0]));
+    const windowDates = getLastNDates(env.activityWindowDays);
+    const dateBucket = new Map(
+      windowDates.map((date) => [
+        date,
+        { contributions: 0, commits: 0, pushEvents: 0, pullRequests: 0 }
+      ])
+    );
 
     for (const event of events) {
       const date = toIsoDate(event.created_at);
-      if (!dateBucket.has(date)) {
+      const current = dateBucket.get(date);
+
+      if (!current) {
         continue;
       }
 
-      const increment = event.type === "PushEvent" ? event.payload?.commits?.length || 1 : 1;
-      dateBucket.set(date, (dateBucket.get(date) || 0) + increment);
+      const commitsCount =
+        event.type === "PushEvent" ? event.payload?.commits?.length || 1 : 0;
+      const pullRequestCount = event.type === "PullRequestEvent" ? 1 : 0;
+      const pushEvents = event.type === "PushEvent" ? 1 : 0;
+
+      const genericContribution =
+        commitsCount > 0 ? commitsCount : pullRequestCount > 0 ? pullRequestCount : 1;
+
+      dateBucket.set(date, {
+        contributions: current.contributions + genericContribution,
+        commits: current.commits + commitsCount,
+        pushEvents: current.pushEvents + pushEvents,
+        pullRequests: current.pullRequests + pullRequestCount
+      });
     }
 
-    return Array.from(dateBucket.entries()).map(([date, contributions]) => ({
+    return Array.from(dateBucket.entries()).map(([date, values]) => ({
       date,
-      contributions
+      contributions: values.contributions,
+      commits: values.commits,
+      pushEvents: values.pushEvents,
+      pullRequests: values.pullRequests
     }));
+  }
+
+  buildActivitySummary(activityByDate, events) {
+    const totalContributions = activityByDate.reduce(
+      (total, entry) => total + entry.contributions,
+      0
+    );
+    const totalCommits = activityByDate.reduce((total, entry) => total + entry.commits, 0);
+    const totalPushes = activityByDate.reduce(
+      (total, entry) => total + entry.pushEvents,
+      0
+    );
+    const activeDays = activityByDate.filter((entry) => entry.contributions > 0).length;
+
+    return {
+      totalEvents: events.length,
+      totalContributions,
+      totalCommits,
+      totalPushes,
+      activeDays
+    };
   }
 }
 

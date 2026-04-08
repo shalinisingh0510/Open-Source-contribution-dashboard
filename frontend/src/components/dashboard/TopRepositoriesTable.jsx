@@ -1,9 +1,28 @@
 import { Card } from "../ui/Card.jsx";
 
-export const TopRepositoriesTable = ({ repositories = [] }) => (
+const formatDate = (value) => {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return date.toLocaleDateString();
+};
+
+export const TopRepositoriesTable = ({
+  title = "Repository Explorer",
+  subtitle = "Most relevant repositories from the selected account.",
+  repositories = [],
+  action = null
+}) => (
   <Card
-    title="Top Repositories"
-    subtitle="Most starred repositories from the selected account."
+    title={title}
+    subtitle={subtitle}
+    action={action}
     className="repo-card"
   >
     <div className="repo-table-wrap" id="repositories">
@@ -14,6 +33,7 @@ export const TopRepositoriesTable = ({ repositories = [] }) => (
             <th>Language</th>
             <th>Stars</th>
             <th>Forks</th>
+            <th>Updated</th>
           </tr>
         </thead>
         <tbody>
@@ -28,11 +48,12 @@ export const TopRepositoriesTable = ({ repositories = [] }) => (
                 <td>{repo.language || "N/A"}</td>
                 <td>{repo.stars}</td>
                 <td>{repo.forks}</td>
+                <td>{formatDate(repo.updatedAt)}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="4">No repositories found.</td>
+              <td colSpan="5">No repositories found.</td>
             </tr>
           )}
         </tbody>
